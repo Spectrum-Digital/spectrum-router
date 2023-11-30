@@ -1,0 +1,13 @@
+sources:
+  - name: SpectrumRouterBase
+    handler:
+      graphql:
+        endpoint: https://{context.url:api.studio.thegraph.com/query/4791/spectrum-router-base/v0.0.2}
+
+additionalTypeDefs: |
+  extend type Pool {
+    chainId: String!
+  }
+
+documents:
+  - ./src/graphql/queries.graphql
