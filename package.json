@@ -5,9 +5,6 @@
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "license": "MIT",
-  "files": [
-    "dist"
-  ],
   "engines": {
     "node": ">=18.0.0"
   },
@@ -22,7 +19,9 @@
     "lint": "eslint \"src/**/*.ts\"",
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "generate": "graphclient build",
-    "prepack": "yarn build",
+    "changeset": "changeset",
+    "prerelease": "yarn build",
+    "release": "changeset publish",
     "example": "ts-node-dev --respawn --transpile-only example/index.ts"
   },
   "dependencies": {
