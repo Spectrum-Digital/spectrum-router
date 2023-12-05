@@ -1,5 +1,11 @@
 # @spectrum-digital/spectrum-router
 
+## 0.0.6
+
+### Patch Changes
+
+- ddc792f: build tsc
+
 ## 0.0.5
 
 ### Patch Changes
