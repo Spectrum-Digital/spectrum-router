@@ -1,2 +1,16 @@
-node_modules
 dist
+cache
+coverage
+node_modules
+tsconfig*.tsbuildinfo
+_cjs
+_esm
+_types
+
+# local env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.envrc
