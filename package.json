@@ -1,9 +1,11 @@
 {
   "name": "@spectrum-digital/spectrum-router",
   "version": "0.0.5",
-  "type": "module",
-  "main": "dist/src/index.js",
-  "types": "dist/src/index.d.ts",
+  "exports": {
+    "require": "./dist/cjs/src/index.js",
+    "import": "./dist/esm/src/index.js"
+  },
+  "main": "dist/cjs/index.js",
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0"
@@ -17,11 +19,10 @@
   },
   "scripts": {
     "lint": "eslint \"src/**/*.ts\"",
-    "build": "yarn clean && yarn lint && yarn build:cjs && yarn build:esm && yarn build:types",
-    "build:cjs": "tsc --project ./tsconfig.build.json --module commonjs --outDir ./dist",
-    "build:esm": "tsc --project ./tsconfig.build.json --module es2015 --outDir ./dist",
-    "build:types": "tsc --project ./tsconfig.build.json --module esnext --declarationDir ./dist --emitDeclarationOnly --declaration --declarationMap",
-    "clean": "rimraf dist",
+    "build": "yarn clean && yarn generate && yarn lint && yarn build:cjs && yarn build:esm && yarn build:cjs",
+    "build:cjs": "tsc --project ./tsconfig.build.json --module commonjs --outdir dist/cjs && echo {\"type\":\"commonjs\"} > ./dist/cjs/package.json",
+    "build:esm": "tsc --project ./tsconfig.build.json --module es2022 --outdir dist/esm && echo {\"type\":\"module\"} > ./dist/esm/package.json",
+    "clean": "rimraf dist && rimraf .graphclient",
     "generate": "graphclient build",
     "changeset": "changeset",
     "prerelease": "yarn build",
