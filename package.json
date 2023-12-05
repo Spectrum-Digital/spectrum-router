@@ -1,16 +1,9 @@
 {
   "name": "@spectrum-digital/spectrum-router",
-<<<<<<< Updated upstream
-  "version": "0.0.3",
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
-=======
-  "version": "0.0.2",
+  "version": "0.0.4",
   "type": "module",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
->>>>>>> Stashed changes
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0"
