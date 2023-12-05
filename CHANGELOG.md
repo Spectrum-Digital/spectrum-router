@@ -1,5 +1,11 @@
 # @spectrum-digital/spectrum-router
 
+## 0.0.5
+
+### Patch Changes
+
+- 041337d: buildconfig
+
 ## 0.0.3
 
 ### Patch Changes
