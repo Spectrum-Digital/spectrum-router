@@ -1,11 +1,17 @@
 {
-  // This file is used to compile the for cjs and esm (see package.json build scripts). It should exclude all test files.
   "extends": "./tsconfig.base.json",
   "include": ["src"],
-  "exclude": [],
+  "exclude": ["node_modules", "dist", "example"],
   "compilerOptions": {
-    "target": "ESNext",
-    "moduleResolution": "Node",
-    "sourceMap": true
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "Node10",
+    "esModuleInterop": false,
+    "sourceMap": true,
+    "noEmit": false,
+    "outDir": "dist/esm",
+    "baseUrl": ".",
+    "lib": ["DOM", "ES2020"],
+    "declaration": true
   }
 }

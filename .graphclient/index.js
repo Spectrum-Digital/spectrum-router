@@ -15,7 +15,8 @@ const runtime_1 = require("@graphql-mesh/runtime");
 const store_1 = require("@graphql-mesh/store");
 const cross_helpers_1 = require("@graphql-mesh/cross-helpers");
 const importedModule$0 = require("./sources/SpectrumRouterBase/introspectionSchema");
-const baseDir = cross_helpers_1.path.join(typeof __dirname === 'string' ? __dirname : '/', '..');
+const utils_5 = require("@graphql-mesh/utils");
+const baseDir = cross_helpers_1.path.join(cross_helpers_1.path.dirname((0, utils_5.fileURLToPath)(import.meta.url)), '..');
 const importFn = (moduleId) => {
     const relativeModuleId = (cross_helpers_1.path.isAbsolute(moduleId) ? cross_helpers_1.path.relative(baseDir, moduleId) : moduleId).split('\\').join('/').replace(baseDir + '/', '');
     switch (relativeModuleId) {
