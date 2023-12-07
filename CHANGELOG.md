@@ -1,5 +1,11 @@
 # @spectrum-digital/spectrum-router
 
+## 0.0.7
+
+### Patch Changes
+
+- 244db56: fix issue with graphql
+
 ## 0.0.6
 
 ### Patch Changes
