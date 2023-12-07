@@ -1,5 +1,11 @@
 # @spectrum-digital/spectrum-router
 
+## 0.0.9
+
+### Patch Changes
+
+- 145ac05: fix release script
+
 ## 0.0.8
 
 ### Patch Changes
