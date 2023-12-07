@@ -4,6 +4,12 @@
 
 ### Patch Changes
 
+- 036c4bc: add npmignore
+
+## 0.0.9
+
+### Patch Changes
+
 - 145ac05: fix release script
 
 ## 0.0.8
