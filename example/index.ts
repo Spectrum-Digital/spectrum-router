@@ -1,6 +1,6 @@
 import { createPublicClient, http } from 'viem'
 import BigNumber from 'bignumber.js'
-import { Token, BytesLike, NodeVolatility, SpectrumRouter, DEXRouters, Path, SpectrumPeriphery, SpectrumContract } from '../dist/esm/src'
+import { Token, BytesLike, NodeVolatility, SpectrumRouter, DEXRouters, Path, SpectrumPeriphery, SpectrumContract } from '../dist/index.js'
 
 const RPC_URL = process.env.RPC_URL || 'https://eth.llamarpc.com'
 const client = createPublicClient({ transport: http(RPC_URL) })

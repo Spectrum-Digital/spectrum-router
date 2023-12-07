@@ -1,5 +1,5 @@
-import BigNumber from 'bignumber.js'
-import { Token } from '../typings'
+import { BigNumber } from 'bignumber.js'
+import { Token } from '../typings/index.js'
 
 export abstract class AMMHelper {
   public static getAmountOutStableOnly(

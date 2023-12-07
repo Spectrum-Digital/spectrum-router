@@ -1,12 +1,12 @@
 import { Abi, ContractFunctionResult } from 'viem'
-import BigNumber from 'bignumber.js'
+import { BigNumber } from 'bignumber.js'
 
-import { BytesLike, GetAmountsOutMultiArgs, GetPoolRequestsArgs, Path, RouterErrorCode, Token } from '../typings'
-import { SPECTRUM_ROUTER_ABI } from '../abi/SPECTRUM_ROUTER_ABI'
-import { RouterAddresses } from '../config'
-import { GetAmountsOutHelper } from '../helpers/getAmountsOut'
-import { GetPoolRequestsHelper } from '../helpers/getPoolRequest'
-import { AMMHelper } from '../helpers/AMM'
+import { BytesLike, GetAmountsOutMultiArgs, GetPoolRequestsArgs, Path, RouterErrorCode, Token } from '../typings/index.js'
+import { SPECTRUM_ROUTER_ABI } from '../abi/SPECTRUM_ROUTER_ABI.js'
+import { RouterAddresses } from '../config.js'
+import { GetAmountsOutHelper } from '../helpers/getAmountsOut.js'
+import { GetPoolRequestsHelper } from '../helpers/getPoolRequest.js'
+import { AMMHelper } from '../helpers/AMM.js'
 
 export abstract class SpectrumContract {
   /**

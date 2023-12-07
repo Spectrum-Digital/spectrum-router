@@ -1,5 +1,5 @@
 import { getAddress } from 'viem'
-import { BytesLike, DEXRouter, NodeVolatility, Path, Token } from '../typings'
+import { BytesLike, DEXRouter, NodeVolatility, Path, Token } from '../typings/index.js'
 
 type GraphCache = {
   get: (key: BytesLike) => Promise<BytesLike[] | undefined>
@@ -161,10 +161,12 @@ export class SpectrumRouter {
 
     // Add pools synchronously, because we need to tap into the cache storage.
     // If we were to do it in parallel, then our cache map would get corrupted.
+    console.log(`[SpectrumRouter]: Starting to inject ${pools.length} pools into cache for ${this.dexRouter.name}.`)
     for (let i = 0; i < pools.length; i++) {
       const pool = pools[i]!
       await this.addPool(pool.token0, pool.token1, pool.stable)
     }
+    console.log(`[SpectrumRouter]: Successfully injected ${pools.length} pools into cache for ${this.dexRouter.name}.`)
 
     this.synchronizing = false
   }

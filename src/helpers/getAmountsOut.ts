@@ -1,9 +1,9 @@
 import { encodeFunctionData } from 'viem'
 
-import { __ROUTER_ADDRESS_MAP } from '../abi/__ROUTER_ADDRESS_MAP'
-import { __ROUTER_FROM_TO_STABLE } from '../abi/__ROUTER_FROM_TO_STABLE'
-import { __ROUTER_FROM_TO_STABLE_FACTORY } from '../abi/__ROUTER_FROM_TO_STABLE_FACTORY'
-import { BytesLike, DEXRouter, GetAmountsOutMultiArgs, Path, Token } from '../typings'
+import { __ROUTER_ADDRESS_MAP } from '../abi/__ROUTER_ADDRESS_MAP.js'
+import { __ROUTER_FROM_TO_STABLE } from '../abi/__ROUTER_FROM_TO_STABLE.js'
+import { __ROUTER_FROM_TO_STABLE_FACTORY } from '../abi/__ROUTER_FROM_TO_STABLE_FACTORY.js'
+import { BytesLike, DEXRouter, GetAmountsOutMultiArgs, Path, Token } from '../typings/index.js'
 
 type CompressedPath = {
   router: DEXRouter

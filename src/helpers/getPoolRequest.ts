@@ -1,12 +1,12 @@
 import { decodeFunctionResult, encodeFunctionData } from 'viem'
 
-import { __FACTORY_GET_PAIR_A_B } from '../abi/__FACTORY_GET_PAIR_A_B'
-import { __FACTORY_GET_POOL_A_B_STABLE } from '../abi/__FACTORY_GET_POOL_A_B_STABLE'
-import { __FACTORY_PAIR_FOR_A_B_STABLE } from '../abi/__FACTORY_PAIR_FOR_A_B_STABLE'
-import { __PAIR_RESERVES_112_112_32 } from '../abi/__PAIR_RESERVES_112_112_32'
-import { __PAIR_RESERVES_256_256_256 } from '../abi/__PAIR_RESERVES_256_256_256'
-import { __PAIR_RESERVES_112_112_16_16 } from '../abi/__PAIR_RESERVES_112_112_16_16'
-import { BytesLike, GetPoolRequestsArgs, Path } from '../typings'
+import { __FACTORY_GET_PAIR_A_B } from '../abi/__FACTORY_GET_PAIR_A_B.js'
+import { __FACTORY_GET_POOL_A_B_STABLE } from '../abi/__FACTORY_GET_POOL_A_B_STABLE.js'
+import { __FACTORY_PAIR_FOR_A_B_STABLE } from '../abi/__FACTORY_PAIR_FOR_A_B_STABLE.js'
+import { __PAIR_RESERVES_112_112_32 } from '../abi/__PAIR_RESERVES_112_112_32.js'
+import { __PAIR_RESERVES_256_256_256 } from '../abi/__PAIR_RESERVES_256_256_256.js'
+import { __PAIR_RESERVES_112_112_16_16 } from '../abi/__PAIR_RESERVES_112_112_16_16.js'
+import { BytesLike, GetPoolRequestsArgs, Path } from '../typings/index.js'
 
 export abstract class GetPoolRequestsHelper {
   public static generateGetPoolRequestsMultiArgs(path: Path): GetPoolRequestsArgs {
