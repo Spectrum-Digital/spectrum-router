@@ -27,10 +27,7 @@ jobs:
           cache: 'yarn'
 
       - name: Install Dependencies
-        run: yarn
-
-      - name: Build
-        run: yarn build
+        run: yarn install --frozen-lockfile
 
       - name: Publish to NPM
         id: changesets

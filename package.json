@@ -21,7 +21,7 @@
     "build": "yarn lint && tsup",
     "changeset": "changeset",
     "prerelease": "yarn build",
-    "release": "changeset publish",
+    "release": "yarn build && changeset publish",
     "example": "ts-node-dev --respawn --transpile-only example/index.ts"
   },
   "dependencies": {
