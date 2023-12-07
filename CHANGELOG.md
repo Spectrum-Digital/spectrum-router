@@ -1,5 +1,12 @@
 # @spectrum-digital/spectrum-router
 
+## 0.0.8
+
+### Patch Changes
+
+- 7df5c8f: add build step
+- 7592315: remove redundant deps
+
 ## 0.0.7
 
 ### Patch Changes
