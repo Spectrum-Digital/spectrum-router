@@ -1,6 +1,6 @@
 {
   "name": "@spectrum-digital/spectrum-router",
-  "version": "0.0.9",
+  "version": "0.0.8",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -21,7 +21,7 @@
     "build": "yarn lint && tsup",
     "changeset": "changeset",
     "prerelease": "yarn build",
-    "release": "yarn build && changeset publish",
+    "release": "changeset publish",
     "example": "ts-node-dev --respawn --transpile-only example/index.ts"
   },
   "dependencies": {
