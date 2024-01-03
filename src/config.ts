@@ -6,14 +6,6 @@ export const RouterAddresses: { [chainId: number]: BytesLike } = {
   [SpectrumChainId.FANTOM]: '0x592EC5A4A4Ad0cbc05344f8a72299D5A203b9510',
 }
 
-export const SubgraphURL: { [chainId in SpectrumChainId]: string } = {
-  [SpectrumChainId.ARBITRUM]: ' https://api.thegraph.com/subgraphs/id/Qmd39AQTxjwxqu9scbNkbytNbmKGAb4vQvJkdQgFytRpCG',
-  // [SpectrumChainId.ARBITRUM]: 'https://api.thegraph.com/subgraphs/name/coinlordd/spectrum-router-arbitrum',
-  [SpectrumChainId.BASE]: ' https://api.studio.thegraph.com/query/4791/spectrum-router-base/v0.0.2',
-  [SpectrumChainId.FANTOM]: 'https://api.thegraph.com/subgraphs/id/QmYySdmgBWnHAbDBhj49EAkf7mzPNQpD2fwD9SXr7RMpPq',
-  // [SpectrumChainId.FANTOM]: 'https://api.thegraph.com/subgraphs/name/coinlordd/spectrum-router-fantom',
-}
-
 export const DEXRouters = {
   ARBITRUM_CAMELOT: {
     name: 'Camelot',

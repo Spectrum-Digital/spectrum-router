@@ -25,7 +25,6 @@
     "example": "ts-node-dev --respawn --transpile-only example/index.ts"
   },
   "dependencies": {
-    "@apollo/client": "^3.8.8",
     "bignumber.js": "^9.1.2",
     "viem": "^1.5.4",
     "zod": "^3.22.4"
@@ -40,7 +39,6 @@
     "eslint-config-prettier": "^8.8.0",
     "eslint-plugin-prettier": "^4.2.1",
     "eslint-plugin-unused-imports": "^2.0.0",
-    "graphql": "^16.8.1",
     "prettier": "^2.8.7",
     "ts-node-dev": "^2.0.0",
     "tsup": "^8.0.1",
