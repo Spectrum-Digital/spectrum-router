@@ -1,5 +1,11 @@
 # @spectrum-digital/spectrum-router
 
+## 0.0.11
+
+### Patch Changes
+
+- acee012: remove spectrum-periphery
+
 ## 0.0.10
 
 ### Patch Changes
