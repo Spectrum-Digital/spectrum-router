@@ -9,7 +9,12 @@ const DEXRouter = z.object({
   address: BytesLike,
   factory: BytesLike,
   getAmountsOut: z.union([z.literal('address[]'), z.literal('from_to_stable'), z.literal('from_to_stable_factory')]),
-  getPair: z.union([z.literal('getPair_A_B'), z.literal('pairFor_A_B_stable'), z.literal('getPool_A_B_stable')]),
+  getPair: z.union([
+    z.literal('getPair_A_B'),
+    z.literal('getPair_A_B_stable'),
+    z.literal('pairFor_A_B_stable'),
+    z.literal('getPool_A_B_stable'),
+  ]),
   getReserves: z.union([z.literal('getReserves_112_112_32'), z.literal('getReserves_112_112_16_16'), z.literal('getReserves_256_256_256')]),
 })
 export type DEXRouter = z.infer<typeof DEXRouter>

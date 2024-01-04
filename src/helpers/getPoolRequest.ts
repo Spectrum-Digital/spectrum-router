@@ -1,6 +1,7 @@
 import { decodeFunctionResult, encodeFunctionData } from 'viem'
 
 import { __FACTORY_GET_PAIR_A_B } from '../abi/__FACTORY_GET_PAIR_A_B.js'
+import { __FACTORY_GET_PAIR_A_B_STABLE } from '../abi/__FACTORY_GET_PAIR_A_B_STABLE.js'
 import { __FACTORY_GET_POOL_A_B_STABLE } from '../abi/__FACTORY_GET_POOL_A_B_STABLE.js'
 import { __FACTORY_PAIR_FOR_A_B_STABLE } from '../abi/__FACTORY_PAIR_FOR_A_B_STABLE.js'
 import { __PAIR_RESERVES_112_112_32 } from '../abi/__PAIR_RESERVES_112_112_32.js'
@@ -62,6 +63,12 @@ export abstract class GetPoolRequestsHelper {
           abi: __FACTORY_GET_PAIR_A_B,
           functionName: 'getPair',
           args: [leg.from.address, leg.to.address],
+        })
+      case 'getPair_A_B_stable':
+        return encodeFunctionData({
+          abi: __FACTORY_GET_PAIR_A_B_STABLE,
+          functionName: 'getPair',
+          args: [leg.from.address, leg.to.address, leg.stable],
         })
       case 'getPool_A_B_stable':
         return encodeFunctionData({
