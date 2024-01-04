@@ -1,5 +1,11 @@
 # @spectrum-digital/spectrum-router
 
+## 0.0.12
+
+### Patch Changes
+
+- 5afecda: add more dexrouters
+
 ## 0.0.11
 
 ### Patch Changes
