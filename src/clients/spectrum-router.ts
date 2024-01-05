@@ -1,53 +1,23 @@
 import { getAddress } from 'viem'
-import { BytesLike, DEXRouter, NodeVolatility, Path, Token } from '../typings/index.js'
+import { BytesLike, NodeVolatility, CompressedPath, InflatedPath } from '../typings/index.js'
+import { ISpectrumRouterCache, SpectrumRouterCache } from './spectrum-router-cache.js'
+import { Compression } from '../helpers/compression.js'
 
-type GraphCache = {
-  get: (key: BytesLike) => Promise<BytesLike[] | undefined>
-  set: (key: BytesLike, value: BytesLike[]) => Promise<void>
+type PathWithVolatilityIsNotStable = Array<InflatedPath[number] & { stable: false; volatility: NodeVolatility }>
+type PathWithVolatility = Array<InflatedPath[number] & { stable: boolean; volatility: NodeVolatility }>
+
+type ISpectrumRouter = ISpectrumRouterCache & {
+  weightedNodes: BytesLike[]
 }
 
-type TokensCache = {
-  get: (key: BytesLike) => Promise<Token | undefined>
-  set: (key: BytesLike, value: Token) => Promise<void>
-}
-
-type VolatilityCache = {
-  get: (key: `${BytesLike}:${BytesLike}`) => Promise<NodeVolatility | undefined>
-  set: (key: `${BytesLike}:${BytesLike}`, value: NodeVolatility) => Promise<void>
-}
-
-type PathsCache = Map<`${BytesLike}:${BytesLike}`, Path[]> // tokenIn:tokenOut -> Path[]
-
-type PathWithVolatilityIsNotStable = Array<Path[number] & { stable: false; volatility: NodeVolatility }>
-type PathWithVolatility = Array<Path[number] & { stable: boolean; volatility: NodeVolatility }>
-
-export class SpectrumRouter {
-  public dexRouter: DEXRouter
+export class SpectrumRouter extends SpectrumRouterCache {
   public chainId: number
+  private weightedNodes: BytesLike[]
 
-  private graph: GraphCache
-  private tokens: TokensCache
-  private volatility: VolatilityCache
-  private paths: PathsCache = new Map()
-  private weightedNodes: BytesLike[] = [] // [weth, usdc, ...]
-  private synchronizing = false
-
-  constructor({
-    dexRouter,
-    graphCache,
-    tokensCache,
-    volatilityCache,
-  }: {
-    dexRouter: DEXRouter
-    graphCache: GraphCache
-    tokensCache: TokensCache
-    volatilityCache: VolatilityCache
-  }) {
-    this.dexRouter = dexRouter
-    this.chainId = dexRouter.chainId
-    this.graph = graphCache
-    this.tokens = tokensCache
-    this.volatility = volatilityCache
+  constructor(params: ISpectrumRouter) {
+    super(params)
+    this.chainId = params.dexRouter.chainId
+    this.weightedNodes = params.weightedNodes
   }
 
   static async getAvailablePaths(
@@ -55,14 +25,14 @@ export class SpectrumRouter {
     tokenOut: string,
     routers: SpectrumRouter[],
   ): Promise<{
-    paths: Path[]
+    paths: CompressedPath[]
     error?: string
   }> {
     try {
       const checksummedTokenIn = getAddress(tokenIn)
       const checksummedTokenOut = getAddress(tokenOut)
 
-      const paths: Path[] = []
+      const paths: CompressedPath[] = []
       for (let i = 0; i < routers.length; i++) {
         const router = routers[i]!
         const candidates = await router.getAvailablePaths(checksummedTokenIn, checksummedTokenOut)
@@ -71,21 +41,36 @@ export class SpectrumRouter {
 
       return { paths }
     } catch (err) {
+      console.error(err)
       return { paths: [], error: 'Invalid addresses' }
     }
   }
 
-  public async getAvailablePaths(tokenIn: BytesLike, tokenOut: BytesLike): Promise<Path[]> {
+  public async getAvailablePaths(tokenIn: BytesLike, tokenOut: BytesLike): Promise<CompressedPath[]> {
     // Exit early if we're routing to the same token
     if (tokenIn === tokenOut) return []
 
     // Check if we've already cached this path
-    const cached = this.getCachedPaths(tokenIn, tokenOut)
+    const cached = await this.getCachedPaths(tokenIn, tokenOut)
     if (cached) return cached
 
-    // Find all available paths without too much recursion
-    const generator = this.findPaths(tokenIn, tokenOut, new Set())
-    let availablePaths = []
+    // Find all available paths
+    const inflatedPaths = await this.__findAvailablePaths(tokenIn, tokenOut)
+
+    // Compress the paths
+    const compressed = Compression.compressInflatedPaths(inflatedPaths)
+
+    // Save the paths into cache
+    await this.updateCachedPaths(tokenIn, tokenOut, compressed)
+
+    // Return the compressed paths
+    return compressed
+  }
+
+  private async __findAvailablePaths(tokenIn: BytesLike, tokenOut: BytesLike): Promise<InflatedPath[]> {
+    // Find all available paths without too much recursion using weighted nodes.
+    const generator = this.__traverseWeightedGraph(tokenIn, tokenOut, new Set())
+    let availablePaths: Array<BytesLike[]> = []
     for await (const result of generator) {
       availablePaths.push(result)
     }
@@ -94,7 +79,7 @@ export class SpectrumRouter {
     availablePaths = availablePaths.map(nodes => nodes.slice(1))
 
     // Convert our nodes into paths
-    const corruptablePaths = await Promise.all(
+    const pathsWithPotentialErrors = await Promise.all(
       availablePaths.map(async nodes => {
         const result: PathWithVolatilityIsNotStable = []
 
@@ -106,11 +91,11 @@ export class SpectrumRouter {
           // Construct the `from` and `to` fields
           const from = previous ? previous.to : tokenIn
           const to = node
-          const fromToken = typeof from === 'string' ? await this.tokens.get(from) : from
-          const toToken = await this.tokens.get(to)
+          const fromToken = typeof from === 'string' ? await this.getToken(from) : from
+          const toToken = await this.getToken(to)
 
           // Volatility will later be used to construct the stable fields.
-          const volatility = await this.volatility.get(`${typeof from === 'string' ? from : from.address}:${to}`)
+          const volatility = await this.getVolatility(typeof from === 'string' ? from : from.address, to)
 
           // Exit early and log the error if we can't find tokens
           if (!fromToken || !toToken || !volatility) {
@@ -133,93 +118,21 @@ export class SpectrumRouter {
     )
 
     // Remove any paths that errored
-    const cleanedPaths = corruptablePaths.flatMap(path => (path ? [path] : []))
+    const cleanedPaths = pathsWithPotentialErrors.flatMap(path => (path ? [path] : []))
 
     // Inject the appropiate volatility into the paths
     const paths = cleanedPaths.reduce((acc, path) => {
       // Detect if we need to split nodes into multiple paths
-      const forkedPaths = this.detectVolatility(path)
+      const forkedPaths = this.__detectVolatility(path)
 
       // Add the forks to the accumulator
       return [...acc, ...forkedPaths]
-    }, [] as Path[])
-
-    // Save the paths into cache
-    void this.updateCachedPaths(tokenIn, tokenOut, paths)
+    }, [] as InflatedPath[])
 
     return paths
   }
 
-  public addWeightedNodes(nodes: BytesLike[]): void {
-    this.weightedNodes = [...new Set([...this.weightedNodes, ...nodes])]
-  }
-
-  public async addPools(pools: { token0: Token; token1: Token; stable: boolean }[]): Promise<void> {
-    // Emit we're synchronizing, this will prevent the path finder from
-    // storing new paths in the cache until we're done synchronizing.
-    this.synchronizing = true
-
-    // Add pools synchronously, because we need to tap into the cache storage.
-    // If we were to do it in parallel, then our cache map would get corrupted.
-    console.log(`[SpectrumRouter]: Starting to inject ${pools.length} pools into cache for ${this.dexRouter.name}.`)
-    for (let i = 0; i < pools.length; i++) {
-      const pool = pools[i]!
-      await this.addPool(pool.token0, pool.token1, pool.stable)
-    }
-    console.log(`[SpectrumRouter]: Successfully injected ${pools.length} pools into cache for ${this.dexRouter.name}.`)
-
-    this.synchronizing = false
-  }
-
-  private async addPool(token0: Token, token1: Token, stable: boolean): Promise<void> {
-    // Register token0
-    void (await this.tokens.set(token0.address, token0))
-
-    // Register token1
-    void (await this.tokens.set(token1.address, token1))
-
-    // Register the volatility of the pair
-    const volatility = stable ? 'stable' : 'volatile'
-    let currentVolatility = await this.volatility.get(`${token0.address}:${token1.address}`)
-
-    void (await this.volatility.set(
-      `${token0.address}:${token1.address}`,
-      currentVolatility === undefined ? volatility : 'stable_volatile',
-    ))
-
-    currentVolatility = await this.volatility.get(`${token1.address}:${token0.address}`)
-    void (await this.volatility.set(
-      `${token1.address}:${token0.address}`,
-      currentVolatility === undefined ? volatility : 'stable_volatile',
-    ))
-
-    // Register token0 -> [token1]
-    let current = (await this.graph.get(token0.address)) || []
-    void (await this.graph.set(token0.address, [...new Set([...current, token1.address])]))
-
-    // Register token1 -> [token0]
-    current = (await this.graph.get(token1.address)) || []
-    void (await this.graph.set(token1.address, [...new Set([...current, token0.address])]))
-  }
-
-  private getCachedPaths(tokenIn: BytesLike, tokenOut: BytesLike): Path[] | undefined {
-    return this.paths.get(`${tokenIn}:${tokenOut}`)
-  }
-
-  private async updateCachedPaths(tokenIn: BytesLike, tokenOut: BytesLike, paths: Path[]): Promise<void> {
-    const nodes = await this.graph.get(tokenIn)
-
-    // Only cache it if there are nodes available, this prevents us from caching during boot.
-    if (!nodes || !nodes.length) return
-
-    // Don't cache if we're synchronizing
-    if (this.synchronizing) return
-
-    // Cache the paths
-    this.paths.set(`${tokenIn}:${tokenOut}`, paths)
-  }
-
-  private async *findPaths(start: BytesLike, end: BytesLike, visited: Set<BytesLike>): AsyncGenerator<BytesLike[]> {
+  private async *__traverseWeightedGraph(start: BytesLike, end: BytesLike, visited: Set<BytesLike>): AsyncGenerator<BytesLike[]> {
     // Check if we've reached our destination
     if (start === end) {
       return yield [...visited, end]
@@ -229,7 +142,7 @@ export class SpectrumRouter {
     visited.add(start)
 
     // Grab adjacent nodes
-    let neighbors = (await this.graph.get(start)) || []
+    let neighbors = await this.getNeighbors(start)
 
     // Only allow weighted nodes (and the exit node) as neighbors
     neighbors = neighbors.filter(neighbor => this.weightedNodes.includes(neighbor) || neighbor === end)
@@ -238,14 +151,14 @@ export class SpectrumRouter {
     for (const neighbor of neighbors) {
       if (!visited.has(neighbor)) {
         // We've found a new neighbor node, recurse
-        yield* this.findPaths(neighbor, end, visited)
+        yield* this.__traverseWeightedGraph(neighbor, end, visited)
       }
     }
 
     visited.delete(start)
   }
 
-  private detectVolatility(path: PathWithVolatilityIsNotStable): Path[] {
+  private __detectVolatility(path: PathWithVolatilityIsNotStable): InflatedPath[] {
     let result: PathWithVolatility[] = [path.map(leg => ({ ...leg }))] // start with a copy of the original array
 
     // Check if we need to go from volatile to stable (default value is stable = false)

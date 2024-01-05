@@ -21,19 +21,31 @@ export type DEXRouter = z.infer<typeof DEXRouter>
 
 const Token = z.object({
   address: BytesLike,
-  chainId: z.number(),
   decimals: z.number(),
 })
 export type Token = z.infer<typeof Token>
 
-const Path = z.array(
-  z.object({
-    router: DEXRouter,
-    from: Token,
-    to: Token,
-    stable: z.boolean(),
-  }),
-)
-export type Path = z.infer<typeof Path>
+const InflatedPathLeg = z.object({ router: DEXRouter, from: Token, to: Token, stable: z.boolean() })
+const InflatedPath = z.array(InflatedPathLeg)
 
-export const PathsValidator = z.array(Path)
+/**
+ * InflatedPathLeg describes a leg in a given path with the most details possible.
+ */
+export type InflatedPathLeg = z.infer<typeof InflatedPathLeg>
+
+/**
+ * InflatedPath is a collection of InflatedPathLegs in sequence.
+ */
+export type InflatedPath = z.infer<typeof InflatedPath>
+
+/**
+ * CompressedPathLeg is a compressed version of the legs within InflatedPath.
+ * It adheres to the following schema: router-from:decimals-to:decimals-stable
+ */
+export type CompressedPathLeg = `${BytesLike}-${BytesLike}:${number}-${BytesLike}:${number}-${boolean}`
+
+/**
+ * CompressedPath is a collection of CompressedPathLegs in sequence.
+ * It seperates each path with a `|` character.
+ */
+export type CompressedPath = string

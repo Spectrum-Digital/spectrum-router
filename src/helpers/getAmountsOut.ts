@@ -3,105 +3,53 @@ import { encodeFunctionData } from 'viem'
 import { __ROUTER_ADDRESS_MAP } from '../abi/__ROUTER_ADDRESS_MAP.js'
 import { __ROUTER_FROM_TO_STABLE } from '../abi/__ROUTER_FROM_TO_STABLE.js'
 import { __ROUTER_FROM_TO_STABLE_FACTORY } from '../abi/__ROUTER_FROM_TO_STABLE_FACTORY.js'
-import { BytesLike, DEXRouter, GetAmountsOutMultiArgs, Path, Token } from '../typings/index.js'
-
-type CompressedPath = {
-  router: DEXRouter
-  legs: {
-    factory: BytesLike
-    from: Token
-    to: Token
-    stable: boolean
-  }[]
-}
+import { BytesLike, GetAmountsOutMultiArgs, InflatedPath } from '../typings/index.js'
+import { InflatedPathLeg } from '../typings/zod.js'
 
 export abstract class GetAmountsOutHelper {
-  public static compressPath(path: Path): CompressedPath[] {
-    return path.reduce((acc, leg) => {
-      const _lastPath = acc[acc.length - 1]
-      const lastPath: CompressedPath = _lastPath ? _lastPath : { router: leg.router, legs: [] }
-
-      if (lastPath.router.address === leg.router.address) {
-        lastPath.legs.push({ from: leg.from, to: leg.to, stable: leg.stable, factory: leg.router.factory })
-        if (!acc.length) {
-          acc[0] = lastPath
-        } else {
-          acc[acc.length - 1] = lastPath
-        }
-      } else {
-        acc[acc.length] = lastPath
-      }
-      return acc
-    }, [] as CompressedPath[])
-  }
-
-  public static decompressPath(paths: CompressedPath[]): Path {
-    return paths.reduce((acc, compressed) => {
-      const path = compressed.legs.map(leg => ({
-        router: compressed.router,
-        from: leg.from,
-        to: leg.to,
-        stable: leg.stable,
-      }))
-      acc.push(...path)
-      return acc
-    }, [] as Path)
-  }
-
-  public static generateGetAmountsOutMultiArgs(paths: CompressedPath[][], amountIn: string): GetAmountsOutMultiArgs {
+  public static generateGetAmountsOutMultiArgs(paths: InflatedPath[], amountIn: string): GetAmountsOutMultiArgs {
     return [
       paths.map(path =>
-        path.map(compressed => {
-          const calldata = this.getCalldata(compressed, amountIn)
-          return { router: compressed.router.address, data: calldata }
+        path.map(leg => {
+          const calldata = this.getCalldata(leg, amountIn)
+          return { router: leg.router.address, data: calldata }
         }),
       ),
     ]
   }
 
-  private static getCalldata(compressed: CompressedPath, amountIn: string): BytesLike {
-    switch (compressed.router.getAmountsOut) {
+  private static getCalldata(leg: InflatedPathLeg, amountIn: string): BytesLike {
+    switch (leg.router.getAmountsOut) {
       case 'address[]':
-        return this.getAddressMapCalldata(compressed, amountIn)
+        return this.getAddressMapCalldata(leg, amountIn)
       case 'from_to_stable':
-        return this.getFromToStableCalldata(compressed, amountIn)
+        return this.getFromToStableCalldata(leg, amountIn)
       case 'from_to_stable_factory':
-        return this.getFromToStableFactoryCalldata(compressed, amountIn)
+        return this.getFromToStableFactoryCalldata(leg, amountIn)
     }
   }
 
-  private static getAddressMapCalldata(compressed: CompressedPath, amountIn: string): BytesLike {
-    const first = compressed.legs[0]
-    if (!first) return '0x'
-
+  private static getAddressMapCalldata(leg: InflatedPathLeg, amountIn: string): BytesLike {
     return encodeFunctionData({
       abi: __ROUTER_ADDRESS_MAP,
       functionName: 'getAmountsOut',
-      args: [BigInt(amountIn), [first.from.address, ...compressed.legs.map(leg => leg.to.address)]],
+      args: [BigInt(amountIn), [leg.from.address, leg.to.address]],
     })
   }
 
-  private static getFromToStableCalldata(compressed: CompressedPath, amountIn: string): BytesLike {
+  private static getFromToStableCalldata(leg: InflatedPathLeg, amountIn: string): BytesLike {
     return encodeFunctionData({
       abi: __ROUTER_FROM_TO_STABLE,
       functionName: 'getAmountsOut',
-      args: [BigInt(amountIn), compressed.legs.map(leg => ({ from: leg.from.address, to: leg.to.address, stable: leg.stable }))],
+      args: [BigInt(amountIn), [{ from: leg.from.address, to: leg.to.address, stable: leg.stable }]],
     })
   }
 
-  private static getFromToStableFactoryCalldata(compressed: CompressedPath, amountIn: string): BytesLike {
+  private static getFromToStableFactoryCalldata(leg: InflatedPathLeg, amountIn: string): BytesLike {
     return encodeFunctionData({
       abi: __ROUTER_FROM_TO_STABLE_FACTORY,
       functionName: 'getAmountsOut',
-      args: [
-        BigInt(amountIn),
-        compressed.legs.map(leg => ({
-          from: leg.from.address,
-          to: leg.to.address,
-          stable: leg.stable,
-          factory: leg.factory,
-        })),
-      ],
+      args: [BigInt(amountIn), [{ from: leg.from.address, to: leg.to.address, stable: leg.stable, factory: leg.router.factory }]],
     })
   }
 }

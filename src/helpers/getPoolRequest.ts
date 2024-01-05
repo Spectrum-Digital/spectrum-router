@@ -7,10 +7,10 @@ import { __FACTORY_PAIR_FOR_A_B_STABLE } from '../abi/__FACTORY_PAIR_FOR_A_B_STA
 import { __PAIR_RESERVES_112_112_32 } from '../abi/__PAIR_RESERVES_112_112_32.js'
 import { __PAIR_RESERVES_256_256_256 } from '../abi/__PAIR_RESERVES_256_256_256.js'
 import { __PAIR_RESERVES_112_112_16_16 } from '../abi/__PAIR_RESERVES_112_112_16_16.js'
-import { BytesLike, GetPoolRequestsArgs, Path } from '../typings/index.js'
+import { BytesLike, GetPoolRequestsArgs, InflatedPath } from '../typings/index.js'
 
 export abstract class GetPoolRequestsHelper {
-  public static generateGetPoolRequestsMultiArgs(path: Path): GetPoolRequestsArgs {
+  public static generateGetPoolRequestsMultiArgs(path: InflatedPath): GetPoolRequestsArgs {
     return [
       path.map(leg => ({
         router: leg.router.address,
@@ -22,7 +22,7 @@ export abstract class GetPoolRequestsHelper {
   }
 
   public static decodeReservesResult(
-    leg: Path[number],
+    leg: InflatedPath[number],
     data: BytesLike,
   ): {
     reserve0: bigint
@@ -56,7 +56,7 @@ export abstract class GetPoolRequestsHelper {
     }
   }
 
-  private static generateGetPairCalldata(leg: Path[number]): BytesLike {
+  private static generateGetPairCalldata(leg: InflatedPath[number]): BytesLike {
     switch (leg.router.getPair) {
       case 'getPair_A_B':
         return encodeFunctionData({
@@ -85,7 +85,7 @@ export abstract class GetPoolRequestsHelper {
     }
   }
 
-  private static generatePoolRequestCalldata(leg: Path[number]): BytesLike {
+  private static generatePoolRequestCalldata(leg: InflatedPath[number]): BytesLike {
     switch (leg.router.getReserves) {
       case 'getReserves_112_112_32':
         return encodeFunctionData({
