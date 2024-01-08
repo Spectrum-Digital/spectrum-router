@@ -20,25 +20,20 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v3
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18.x
-          cache: 'pnpm'
+          cache: 'yarn'
 
       - name: Install Dependencies
-        run: pnpm install
+        run: yarn install --frozen-lockfile
 
       - name: Publish to NPM
         id: changesets
         uses: changesets/action@v1
         with:
-          publish: pnpm release
+          publish: yarn release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
