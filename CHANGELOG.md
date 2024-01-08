@@ -1,5 +1,11 @@
 # @spectrum-digital/spectrum-router
 
+## 0.0.16
+
+### Patch Changes
+
+- 6f7d845: revert gh workflow
+
 ## 0.0.15
 
 ### Patch Changes
