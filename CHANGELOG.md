@@ -1,5 +1,12 @@
 # @spectrum-digital/spectrum-router
 
+## 0.0.14
+
+### Patch Changes
+
+- 07e34e4: update github workflows
+- 8596dae: fix issue with stableswaps
+
 ## 0.0.13
 
 ### Patch Changes
