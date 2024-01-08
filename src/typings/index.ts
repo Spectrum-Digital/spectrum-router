@@ -1,7 +1,7 @@
 import { GetFunctionArgs } from 'viem'
 import { SPECTRUM_ROUTER_ABI } from '../abi/SPECTRUM_ROUTER_ABI.js'
 
-export { BytesLike, Token, DEXRouter, InflatedPath, CompressedPath } from './zod.js'
+export { BytesLike, Token, DEXConfiguration, InflatedPath, CompressedPath } from './zod.js'
 
 export enum SpectrumChainId {
   ARBITRUM = 42161,

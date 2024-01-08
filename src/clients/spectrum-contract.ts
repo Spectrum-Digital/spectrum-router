@@ -149,25 +149,6 @@ export abstract class SpectrumContract {
           throw new Error('legs, legResults, legTokens0 do not match length')
         }
 
-        const calculateRatio = (leg: InflatedPath[number], token0: BytesLike, _reserve0: bigint, _reserve1: bigint): BigNumber => {
-          const isToken0 = token0.toLowerCase() === leg.from.address.toLowerCase()
-          if (leg.stable) {
-            const price = AMMHelper.getAmountOutStableOnly(
-              new BigNumber(1).shiftedBy(leg.from.decimals),
-              leg.from,
-              isToken0 ? leg.from : leg.to,
-              isToken0 ? leg.to : leg.from,
-              new BigNumber(_reserve0.toString()),
-              new BigNumber(_reserve1.toString()),
-            )
-            return new BigNumber(price).shiftedBy(-leg.to.decimals)
-          } else {
-            const reserve0 = new BigNumber(_reserve0.toString()).shiftedBy(isToken0 ? -leg.from.decimals : -leg.to.decimals)
-            const reserve1 = new BigNumber(_reserve1.toString()).shiftedBy(isToken0 ? -leg.to.decimals : -leg.from.decimals)
-            return isToken0 ? reserve1.div(reserve0) : reserve0.div(reserve1)
-          }
-        }
-
         // Each leg calculates the price of the `from` token in terms of the `to` token.
         // After each hop, we end up with a multiplier per hop that we ultimately need to
         // multiply together to get the final price of tokenIn in terms of tokenOut.
@@ -175,10 +156,23 @@ export abstract class SpectrumContract {
           const leg = path[index]! // We know this is safe because of the check above.
           const token0 = legTokens0[index]! // We know this is safe because of the check above.
 
+          // Decode the result to extract the reserves
           const { reserve0, reserve1 } = GetPoolRequestsHelper.decodeReservesResult(leg, result)
-          return calculateRatio(leg, token0, reserve0, reserve1)
+
+          // Calculate the ratio of the reserves
+          return AMMHelper.getReservesRatio(
+            leg.dexConfiguration,
+            new BigNumber(1).shiftedBy(leg.from.decimals),
+            leg.from,
+            leg.to,
+            token0,
+            leg.stable,
+            new BigNumber(reserve0.toString()),
+            new BigNumber(reserve1.toString()),
+          )
         })
 
+        // Reduce and multiply the multipliers together to get the final price.
         return multipliers.reduce((acc, multiplier) => acc.multipliedBy(multiplier), new BigNumber(1))
       },
     }

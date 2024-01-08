@@ -12,14 +12,14 @@ export abstract class GetAmountsOutHelper {
       paths.map(path =>
         path.map(leg => {
           const calldata = this.getCalldata(leg, amountIn)
-          return { router: leg.router.address, data: calldata }
+          return { router: leg.dexConfiguration.router_address, data: calldata }
         }),
       ),
     ]
   }
 
   private static getCalldata(leg: InflatedPathLeg, amountIn: string): BytesLike {
-    switch (leg.router.getAmountsOut) {
+    switch (leg.dexConfiguration.router_getAmountsOut) {
       case 'address[]':
         return this.getAddressMapCalldata(leg, amountIn)
       case 'from_to_stable':
@@ -49,7 +49,10 @@ export abstract class GetAmountsOutHelper {
     return encodeFunctionData({
       abi: __ROUTER_FROM_TO_STABLE_FACTORY,
       functionName: 'getAmountsOut',
-      args: [BigInt(amountIn), [{ from: leg.from.address, to: leg.to.address, stable: leg.stable, factory: leg.router.factory }]],
+      args: [
+        BigInt(amountIn),
+        [{ from: leg.from.address, to: leg.to.address, stable: leg.stable, factory: leg.dexConfiguration.factory_address }],
+      ],
     })
   }
 }

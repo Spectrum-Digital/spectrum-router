@@ -1,6 +1,6 @@
 import { getAddress } from 'viem'
 import { CompressedPath, InflatedPath } from '../typings'
-import { getDEXRouter } from '../utils'
+import { getDEXConfiguration } from '../utils'
 import { CompressedPathLeg, InflatedPathLeg } from '../typings/zod'
 
 export abstract class Compression {
@@ -13,7 +13,7 @@ export abstract class Compression {
   }
 
   private static __compressInflatedPathLeg(leg: InflatedPathLeg): CompressedPathLeg {
-    return `${leg.router.address}-${leg.from.address}:${leg.from.decimals}-${leg.to.address}:${leg.to.decimals}-${leg.stable}`
+    return `${leg.dexConfiguration.router_address}-${leg.from.address}:${leg.from.decimals}-${leg.to.address}:${leg.to.decimals}-${leg.stable}`
   }
 
   public static decompressPaths(paths: CompressedPath[]): InflatedPath[] {
@@ -46,14 +46,19 @@ export abstract class Compression {
     const [toAddress, toDecimals] = _to.split(':')
     if (!fromAddress || !fromDecimals || !toAddress || !toDecimals) return undefined
 
-    const routerAddress = getAddress(_router)
-    const router = getDEXRouter(routerAddress)
-    if (!router) return undefined
-
+    const router = getAddress(_router)
     const from = getAddress(fromAddress)
     const to = getAddress(toAddress)
     const stable = _stable === 'true'
 
-    return { router, from: { address: from, decimals: Number(fromDecimals) }, to: { address: to, decimals: Number(toDecimals) }, stable }
+    const dexConfiguration = getDEXConfiguration(router)
+    if (!dexConfiguration) return undefined
+
+    return {
+      dexConfiguration: dexConfiguration,
+      from: { address: from, decimals: Number(fromDecimals) },
+      to: { address: to, decimals: Number(toDecimals) },
+      stable,
+    }
   }
 }

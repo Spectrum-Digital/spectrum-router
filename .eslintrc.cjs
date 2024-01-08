@@ -14,16 +14,5 @@ module.exports = {
         endOfLine: 'auto',
       },
     ],
-    'no-restricted-imports': [
-      'error',
-      {
-        paths: [
-          {
-            name: 'lodash',
-            message: "Please import from 'lodash/module' directly to support tree-shaking.",
-          },
-        ],
-      },
-    ],
   },
 }

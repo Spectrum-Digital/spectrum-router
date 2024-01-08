@@ -1,6 +1,8 @@
-import { DEXRouters } from '../config.js'
-import { BytesLike, DEXRouter } from '../typings/index.js'
+import { DEXConfigurations } from '../config.js'
+import { BytesLike, DEXConfiguration } from '../typings/index.js'
 
-export function getDEXRouter(router: BytesLike): DEXRouter | undefined {
-  return Object.values(DEXRouters).find(r => r.address.toLowerCase() === router.toLowerCase())
+export const FIVE_MINUTES_MS = 5 * 60 * 1000
+
+export function getDEXConfiguration(router: BytesLike): DEXConfiguration | undefined {
+  return Object.values(DEXConfigurations).find(r => r.router_address.toLowerCase() === router.toLowerCase())
 }

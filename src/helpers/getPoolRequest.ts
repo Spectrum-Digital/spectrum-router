@@ -13,8 +13,8 @@ export abstract class GetPoolRequestsHelper {
   public static generateGetPoolRequestsMultiArgs(path: InflatedPath): GetPoolRequestsArgs {
     return [
       path.map(leg => ({
-        router: leg.router.address,
-        factory: leg.router.factory,
+        router: leg.dexConfiguration.router_address,
+        factory: leg.dexConfiguration.factory_address,
         getPairCalldata: this.generateGetPairCalldata(leg),
         poolRequestCalldata: this.generatePoolRequestCalldata(leg),
       })),
@@ -28,7 +28,7 @@ export abstract class GetPoolRequestsHelper {
     reserve0: bigint
     reserve1: bigint
   } {
-    switch (leg.router.getReserves) {
+    switch (leg.dexConfiguration.pair_getReserves) {
       case 'getReserves_112_112_32': {
         const [token0, token1] = decodeFunctionResult({
           abi: __PAIR_RESERVES_112_112_32,
@@ -57,7 +57,7 @@ export abstract class GetPoolRequestsHelper {
   }
 
   private static generateGetPairCalldata(leg: InflatedPath[number]): BytesLike {
-    switch (leg.router.getPair) {
+    switch (leg.dexConfiguration.factory_getPair) {
       case 'getPair_A_B':
         return encodeFunctionData({
           abi: __FACTORY_GET_PAIR_A_B,
@@ -86,7 +86,7 @@ export abstract class GetPoolRequestsHelper {
   }
 
   private static generatePoolRequestCalldata(leg: InflatedPath[number]): BytesLike {
-    switch (leg.router.getReserves) {
+    switch (leg.dexConfiguration.pair_getReserves) {
       case 'getReserves_112_112_32':
         return encodeFunctionData({
           abi: __PAIR_RESERVES_112_112_32,
