@@ -1,5 +1,11 @@
 # @spectrum-digital/spectrum-router
 
+## 0.0.15
+
+### Patch Changes
+
+- 1a1981c: version bump
+
 ## 0.0.14
 
 ### Patch Changes
