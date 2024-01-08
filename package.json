@@ -18,9 +18,9 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "lint": "eslint \"src/**/*.ts\"",
-    "build": "yarn lint && tsup",
+    "build": "pnpm lint && tsup",
     "changeset": "changeset",
-    "prerelease": "yarn build",
+    "prerelease": "pnpm build",
     "release": "changeset publish",
     "example": "ts-node-dev --respawn --transpile-only example/index.ts"
   },
