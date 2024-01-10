@@ -29,6 +29,8 @@ class CacheBase {
 }
 
 export class PathsCacheController extends CacheBase {
+  private readonly EXPIRATION_TIME_SECONDS = 30 * 60
+
   constructor(args: BaseConstructor) {
     super({ ...args, type: 'paths' })
   }
@@ -44,8 +46,10 @@ export class PathsCacheController extends CacheBase {
   }
 
   public async set(key: `${BytesLike}:${BytesLike}`, value: CompressedPath[]): Promise<void> {
-    await this.redis.sadd(this.getHashKey(key), ...value)
-    await this.redis.expire(this.getHashKey(key), 30 * 60)
+    if (value.length) {
+      await this.redis.sadd(this.getHashKey(key), ...value)
+      await this.redis.expire(this.getHashKey(key), this.EXPIRATION_TIME_SECONDS)
+    }
   }
 }
 
@@ -65,7 +69,9 @@ export class GraphCacheController extends CacheBase {
   }
 
   public async set(key: BytesLike, value: BytesLike[]): Promise<void> {
-    await this.redis.sadd(this.getHashKey(key), ...value)
+    if (value.length) {
+      await this.redis.sadd(this.getHashKey(key), ...value)
+    }
   }
 }
 

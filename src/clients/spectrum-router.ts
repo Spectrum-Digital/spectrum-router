@@ -13,13 +13,22 @@ import { FIVE_MINUTES_MS } from '../utils/index.js'
 
 type PathWithVolatilityIsNotStable = Array<InflatedPath[number] & { stable: false; volatility: NodeVolatility }>
 type Pool = { token0: Token; token1: Token; stable: boolean; blockNumber: number }
-type GetPoolsCallback = (startBlockNumber: number) => Promise<{ error: true } | { error: false; pools: Pool[]; latestBlockNumber: number }>
+type GetPoolsCallback = (startBlockNumber: number) => Promise<
+  | { error: true }
+  | {
+      error: false
+      pools: Pool[]
+      latestBlockNumber: number
+      isBatch: boolean
+    }
+>
 
 type ISpectrumRouter = {
   dexConfiguration: DEXConfiguration
   getPoolsCallback: GetPoolsCallback
   getPoolsCallbackTimeoutMS?: number
   weightedNodes: BytesLike[]
+  maximumNumberOfHops?: number
   redisURL: string
   redisPrefix: string
   verbose?: boolean
@@ -116,7 +125,7 @@ export class SpectrumRouter {
   }
 
   private async __synchronize(): Promise<void> {
-    const sync = async () => {
+    const sync = async (): Promise<void> => {
       // Skip if we're already synchronizing
       if (this._synchronizing) return
 
@@ -132,6 +141,11 @@ export class SpectrumRouter {
 
       // Add the pools to the cache
       await this.__addPools(result.pools, result.latestBlockNumber)
+
+      // Check if the items were only a batch
+      if (result.isBatch) {
+        return await sync()
+      }
     }
 
     // Start synchronizing on boot
@@ -150,13 +164,19 @@ export class SpectrumRouter {
    * @param tokenIn The token to input.
    * @param tokenOut The token to output.
    * @param routers The routers to search for paths through.
+   * @param maximumNumberOfHops Maximum number of hops allowed within a path
    * @returns A list of available paths in a compressed format.
    */
-  static async getAvailablePaths(tokenIn: BytesLike, tokenOut: BytesLike, routers: SpectrumRouter[]): Promise<CompressedPath[]> {
+  static async getAvailablePaths(
+    tokenIn: BytesLike,
+    tokenOut: BytesLike,
+    routers: SpectrumRouter[],
+    maximumNumberOfHops = 3,
+  ): Promise<CompressedPath[]> {
     const paths: CompressedPath[] = []
     for (let i = 0; i < routers.length; i++) {
       const router = routers[i]!
-      const candidates = await router.getAvailablePaths(tokenIn, tokenOut)
+      const candidates = await router.getAvailablePaths(tokenIn, tokenOut, maximumNumberOfHops)
       paths.push(...candidates)
     }
     return paths
@@ -170,33 +190,36 @@ export class SpectrumRouter {
    * Get a list of available paths between two tokens for this router.
    * @param tokenIn The token to input.
    * @param tokenOut  The token to output.
+   * @param maximumNumberOfHops Maximum number of hops allowed within a path
    * @returns A list of available paths in a compressed format.
    */
-  public async getAvailablePaths(tokenIn: BytesLike, tokenOut: BytesLike): Promise<CompressedPath[]> {
+  public async getAvailablePaths(tokenIn: BytesLike, tokenOut: BytesLike, maximumNumberOfHops = 3): Promise<CompressedPath[]> {
     // Exit early if we're routing to the same token
     if (tokenIn === tokenOut) return []
 
     // Check if we've already cached this path
     const cached = await this.__getCachedPaths(tokenIn, tokenOut)
-    if (cached.length) return cached
+    if (cached.length) {
+      const inflated = Compression.decompressPaths(cached)
+      const filtered = inflated.filter(paths => paths.length <= maximumNumberOfHops)
+      return Compression.compressInflatedPaths(filtered)
+    }
 
     // Find all available paths
     const inflatedPaths = await this.__getAvailablePaths(tokenIn, tokenOut)
 
-    // Compress the paths
-    const compressed = Compression.compressInflatedPaths(inflatedPaths)
+    // Compress the paths so we can spot duplicates
+    const dedupedAndCompressed = [...new Set(Compression.compressInflatedPaths(inflatedPaths))]
 
-    // Spot duplicates and remove them
-    const deduped = [...new Set(compressed)]
+    // dedupedAndCompressed is the true-est of states, save it in cache
+    await this.__updateCachedPaths(tokenIn, tokenOut, dedupedAndCompressed)
 
-    // Exit early if we have no paths
-    if (!deduped.length) return []
+    // Decompress the deduped paths so we can filter for hops again
+    const dedupedInflatedPaths = Compression.decompressPaths(dedupedAndCompressed)
+    const filteredInflatedPaths = dedupedInflatedPaths.filter(paths => paths.length <= maximumNumberOfHops)
 
-    // Save the paths into cache
-    await this.__updateCachedPaths(tokenIn, tokenOut, deduped)
-
-    // Return the compressed paths
-    return compressed
+    // Return the filtered paths in a compressed format again
+    return Compression.compressInflatedPaths(filteredInflatedPaths)
   }
 
   /* ------------------------------------*

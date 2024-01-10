@@ -7,50 +7,50 @@ import { BytesLike, GetAmountsOutMultiArgs, InflatedPath } from '../typings/inde
 import { InflatedPathLeg } from '../typings/zod.js'
 
 export abstract class GetAmountsOutHelper {
-  public static generateGetAmountsOutMultiArgs(paths: InflatedPath[], amountIn: string): GetAmountsOutMultiArgs {
+  public static generateGetAmountsOutMultiArgs(paths: InflatedPath[], amountInRaw: string): GetAmountsOutMultiArgs {
     return [
       paths.map(path =>
         path.map(leg => {
-          const calldata = this.getCalldata(leg, amountIn)
+          const calldata = this.getCalldata(leg, amountInRaw)
           return { router: leg.dexConfiguration.router_address, data: calldata }
         }),
       ),
     ]
   }
 
-  private static getCalldata(leg: InflatedPathLeg, amountIn: string): BytesLike {
+  private static getCalldata(leg: InflatedPathLeg, amountInRaw: string): BytesLike {
     switch (leg.dexConfiguration.router_getAmountsOut) {
       case 'address[]':
-        return this.getAddressMapCalldata(leg, amountIn)
+        return this.getAddressMapCalldata(leg, amountInRaw)
       case 'from_to_stable':
-        return this.getFromToStableCalldata(leg, amountIn)
+        return this.getFromToStableCalldata(leg, amountInRaw)
       case 'from_to_stable_factory':
-        return this.getFromToStableFactoryCalldata(leg, amountIn)
+        return this.getFromToStableFactoryCalldata(leg, amountInRaw)
     }
   }
 
-  private static getAddressMapCalldata(leg: InflatedPathLeg, amountIn: string): BytesLike {
+  private static getAddressMapCalldata(leg: InflatedPathLeg, amountInRaw: string): BytesLike {
     return encodeFunctionData({
       abi: __ROUTER_ADDRESS_MAP,
       functionName: 'getAmountsOut',
-      args: [BigInt(amountIn), [leg.from.address, leg.to.address]],
+      args: [BigInt(amountInRaw), [leg.from.address, leg.to.address]],
     })
   }
 
-  private static getFromToStableCalldata(leg: InflatedPathLeg, amountIn: string): BytesLike {
+  private static getFromToStableCalldata(leg: InflatedPathLeg, amountInRaw: string): BytesLike {
     return encodeFunctionData({
       abi: __ROUTER_FROM_TO_STABLE,
       functionName: 'getAmountsOut',
-      args: [BigInt(amountIn), [{ from: leg.from.address, to: leg.to.address, stable: leg.stable }]],
+      args: [BigInt(amountInRaw), [{ from: leg.from.address, to: leg.to.address, stable: leg.stable }]],
     })
   }
 
-  private static getFromToStableFactoryCalldata(leg: InflatedPathLeg, amountIn: string): BytesLike {
+  private static getFromToStableFactoryCalldata(leg: InflatedPathLeg, amountInRaw: string): BytesLike {
     return encodeFunctionData({
       abi: __ROUTER_FROM_TO_STABLE_FACTORY,
       functionName: 'getAmountsOut',
       args: [
-        BigInt(amountIn),
+        BigInt(amountInRaw),
         [{ from: leg.from.address, to: leg.to.address, stable: leg.stable, factory: leg.dexConfiguration.factory_address }],
       ],
     })

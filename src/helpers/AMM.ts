@@ -18,10 +18,10 @@ export abstract class AMMHelper {
 
     if (stable && dex.pair_stable_formula !== 'N/A') {
       switch (dex.pair_stable_formula) {
-        case 'x3y_y3x_variant_A': {
-          return this.getReservesRatioStable_Variant_A(
-            dex.pair_stable_formula,
-            amountInRaw,
+        case 'x3y_y3x_variant_A':
+          const result = this.getReservesRatioStable_Variant_A(
+            'x3y_y3x_variant_A',
+            new BigNumber(amountInRaw.toFixed(0)),
             tokenIn,
             tokenOut,
             token0_,
@@ -29,11 +29,26 @@ export abstract class AMMHelper {
             reserve0Raw,
             reserve1Raw,
           )
-        }
+
+          // For some reason A tends to return 0 with illiquid swaps. Thus fallback to B,
+          // which - despite its simplicity - is an optimized version of A developed by Andre.
+          return result
+            ? result
+            : this.getReservesRatioStable_Variant_B(
+                'x3y_y3x_variant_B',
+                new BigNumber(amountInRaw.toFixed(0)),
+                tokenIn,
+                tokenOut,
+                token0_,
+                token1_,
+                reserve0Raw,
+                reserve1Raw,
+              )
+
         case 'x3y_y3x_variant_B': {
           return this.getReservesRatioStable_Variant_B(
-            dex.pair_stable_formula,
-            amountInRaw,
+            'x3y_y3x_variant_B',
+            new BigNumber(amountInRaw.toFixed(0)),
             tokenIn,
             tokenOut,
             token0_,
@@ -72,7 +87,7 @@ export abstract class AMMHelper {
     token1: Token,
     reserve0Raw: BigNumber,
     reserve1Raw: BigNumber,
-  ): BigNumber {
+  ): BigNumber | undefined {
     /**
      * The following DEXes adhere to this variant:
      * - Aerodrome V2 (Base) https://basescan.org/address/0xa4e46b4f701c62e14df11b48dce76a7d793cd6d7#code
@@ -155,8 +170,9 @@ export abstract class AMMHelper {
     const amountIn = isToken0 ? amountInRaw.times(1e18).div(decimals0) : amountInRaw.times(1e18).div(decimals1)
 
     const _y = _get_y(amountIn.plus(reserveA), xy, reserveB, decimals0, decimals1)
-    const y = _y ? reserveB.minus(_y) : new BigNumber(0)
+    if (!_y) return undefined
 
+    const y = reserveB.minus(_y)
     return y
       .times(isToken0 ? decimals1 : decimals0)
       .div(1e18)
