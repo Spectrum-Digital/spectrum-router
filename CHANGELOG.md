@@ -1,5 +1,11 @@
 # @spectrum-digital/spectrum-router
 
+## 0.0.17
+
+### Patch Changes
+
+- dee4637: bug fixes & refactoring
+
 ## 0.0.16
 
 ### Patch Changes
