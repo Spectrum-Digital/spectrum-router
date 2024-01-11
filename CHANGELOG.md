@@ -1,5 +1,11 @@
 # @spectrum-digital/spectrum-router
 
+## 0.0.18
+
+### Patch Changes
+
+- c1ad8f0: fixed issue with cache performance
+
 ## 0.0.17
 
 ### Patch Changes
