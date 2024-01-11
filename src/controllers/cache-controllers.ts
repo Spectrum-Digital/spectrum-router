@@ -1,5 +1,5 @@
 import { Redis } from 'ioredis'
-import { BytesLike, CompressedPath, DEXConfiguration, NodeVolatility, Token } from '../typings'
+import { BytesLike, CompressedPath, DEXConfiguration, Token } from '../typings'
 
 type BaseConstructor = {
   dexConfiguration: DEXConfiguration
@@ -17,7 +17,7 @@ class CacheBase {
     redisURL,
     redisPrefix,
   }: BaseConstructor & {
-    type: 'paths' | 'graph' | 'tokens' | 'volatility' | 'blockHeightCheckpoint'
+    type: 'paths' | 'graph-stable' | 'graph-volatile' | 'tokens' | 'blockHeightCheckpoint'
   }) {
     this.redis = new Redis(redisURL)
     this.prefix = `${redisPrefix}:${type}:${dexConfiguration.router_address}:${dexConfiguration.chainId}`
@@ -53,25 +53,47 @@ export class PathsCacheController extends CacheBase {
   }
 }
 
-export class GraphCacheController extends CacheBase {
+export class GraphStableCacheController extends CacheBase {
   constructor(args: BaseConstructor) {
-    super({ ...args, type: 'graph' })
+    super({ ...args, type: 'graph-stable' })
   }
 
-  public async get(key: BytesLike): Promise<BytesLike[]> {
+  public async get(tokenX: BytesLike, tokenY: BytesLike): Promise<BytesLike | undefined> {
     try {
-      const neighbors = await this.redis.smembers(this.getHashKey(key))
-      return neighbors as BytesLike[]
+      const key = `${tokenX}:${tokenY}`
+      const pair = await this.redis.get(this.getHashKey(key))
+      return pair ? BytesLike.parse(pair) : undefined
     } catch (err) {
       console.error(err)
-      return []
+      return undefined
     }
   }
 
-  public async set(key: BytesLike, value: BytesLike[]): Promise<void> {
-    if (value.length) {
-      await this.redis.sadd(this.getHashKey(key), ...value)
+  public async set(tokenX: BytesLike, tokenY: BytesLike, pair: BytesLike): Promise<void> {
+    const key = `${tokenX}:${tokenY}`
+    await this.redis.set(this.getHashKey(key), pair)
+  }
+}
+
+export class GraphVolatileCacheController extends CacheBase {
+  constructor(args: BaseConstructor) {
+    super({ ...args, type: 'graph-volatile' })
+  }
+
+  public async get(tokenX: BytesLike, tokenY: BytesLike): Promise<BytesLike | undefined> {
+    try {
+      const key = `${tokenX}:${tokenY}`
+      const pair = await this.redis.get(this.getHashKey(key))
+      return pair ? BytesLike.parse(pair) : undefined
+    } catch (err) {
+      console.error(err)
+      return undefined
     }
+  }
+
+  public async set(tokenX: BytesLike, tokenY: BytesLike, pair: BytesLike): Promise<void> {
+    const key = `${tokenX}:${tokenY}`
+    await this.redis.set(this.getHashKey(key), pair)
   }
 }
 
@@ -83,7 +105,7 @@ export class TokensCacheController extends CacheBase {
   public async get(key: BytesLike): Promise<Token | undefined> {
     try {
       const token = await this.redis.hgetall(this.getHashKey(key))
-      return Token.parse(token)
+      return token ? Token.parse(token) : undefined
     } catch (err) {
       console.error(err)
       return undefined
@@ -92,26 +114,6 @@ export class TokensCacheController extends CacheBase {
 
   public async set(key: BytesLike, value: Token): Promise<void> {
     await this.redis.hset(this.getHashKey(key), value)
-  }
-}
-
-export class VolatilityCacheController extends CacheBase {
-  constructor(args: BaseConstructor) {
-    super({ ...args, type: 'volatility' })
-  }
-
-  public async get(key: `${BytesLike}:${BytesLike}`): Promise<NodeVolatility | undefined> {
-    try {
-      const volatility = await this.redis.get(this.getHashKey(key))
-      return volatility ? (volatility as NodeVolatility) : undefined
-    } catch (err) {
-      console.error(err)
-      return undefined
-    }
-  }
-
-  public async set(key: `${BytesLike}:${BytesLike}`, value: NodeVolatility): Promise<void> {
-    await this.redis.set(this.getHashKey(key), value)
   }
 }
 

@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-const BytesLike = z.custom<`0x${string}`>(val => (typeof val === 'string' ? /^0x/i.test(val) : false))
+export const BytesLike = z.custom<`0x${string}`>(val => (typeof val === 'string' ? /^0x/i.test(val) : false))
 export type BytesLike = z.infer<typeof BytesLike>
 
 const DEXConfiguration = z.object({

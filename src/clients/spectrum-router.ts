@@ -4,15 +4,15 @@ import { Compression } from '../helpers/compression.js'
 import { parallelizeVolatility } from '../helpers/parallelization.js'
 import {
   BlockheightCheckpointCacheController,
-  GraphCacheController,
+  GraphStableCacheController,
+  GraphVolatileCacheController,
   PathsCacheController,
   TokensCacheController,
-  VolatilityCacheController,
 } from '../controllers/cache-controllers.js'
 import { FIVE_MINUTES_MS } from '../utils/index.js'
 
 type PathWithVolatilityIsNotStable = Array<InflatedPath[number] & { stable: false; volatility: NodeVolatility }>
-type Pool = { token0: Token; token1: Token; stable: boolean; blockNumber: number }
+type Pool = { address: BytesLike; token0: Token; token1: Token; stable: boolean; blockNumber: number }
 type GetPoolsCallback = (startBlockNumber: number) => Promise<
   | { error: true }
   | {
@@ -33,6 +33,8 @@ type ISpectrumRouter = {
   redisPrefix: string
   verbose?: boolean
 }
+
+const CHUNK_SIZE = 500
 
 export class SpectrumRouter {
   /**
@@ -56,19 +58,19 @@ export class SpectrumRouter {
   private readonly _pathsCache: PathsCacheController
 
   /**
-   * A cache of our Directed Weighted Graph.
+   * A cache of our Directed Weighted Graph for Stable pairs.
    */
-  private readonly _graphCache: GraphCacheController
+  private readonly _graphStableCache: GraphStableCacheController
+
+  /**
+   * A cache of our Directed Weighted Graph for Volatile pairs.
+   */
+  private readonly _graphVolatileCache: GraphVolatileCacheController
 
   /**
    * A cache of tokens known to the factory within DEXConfiguration.
    */
   private readonly _tokensCache: TokensCacheController
-
-  /**
-   * A cache of volatility between two tokens (stable vs volatile).
-   */
-  private readonly _volatilityCache: VolatilityCacheController
 
   /**
    * A cache of the blockheight checkpoint.
@@ -106,9 +108,9 @@ export class SpectrumRouter {
     this.chainId = params.dexConfiguration.chainId
     this.weightedNodes = params.weightedNodes
     this._pathsCache = new PathsCacheController(params)
-    this._graphCache = new GraphCacheController(params)
+    this._graphStableCache = new GraphStableCacheController(params)
+    this._graphVolatileCache = new GraphVolatileCacheController(params)
     this._tokensCache = new TokensCacheController(params)
-    this._volatilityCache = new VolatilityCacheController(params)
     this._blockheightCheckpointCache = new BlockheightCheckpointCacheController(params)
     this._getPoolsCallback = params.getPoolsCallback
     this._getPoolsCallbackTimeoutMS = params.getPoolsCallbackTimeoutMS ?? FIVE_MINUTES_MS
@@ -164,7 +166,7 @@ export class SpectrumRouter {
    * @param tokenIn The token to input.
    * @param tokenOut The token to output.
    * @param routers The routers to search for paths through.
-   * @param maximumNumberOfHops Maximum number of hops allowed within a path
+   * @param maximumNumberOfHops Maximum number of hops allowed within a path. Defaults to 3.
    * @returns A list of available paths in a compressed format.
    */
   static async getAvailablePaths(
@@ -313,11 +315,25 @@ export class SpectrumRouter {
     // Log our current position so we don't visit it again
     visited.add(start)
 
-    // Grab adjacent nodes
-    let neighbors = await this.__getNeighbors(start)
+    // Append our destination to our list of weightedNodes
+    const weightedNodes: BytesLike[] = [...new Set([...this.weightedNodes, end])]
 
-    // Only allow weighted nodes (and the exit node) as neighbors
-    neighbors = neighbors.filter(neighbor => this.weightedNodes.includes(neighbor) || neighbor === end)
+    // Fetch the list of neighbors to our current node.
+    const neighbors: BytesLike[] = await Promise.all(
+      weightedNodes.filter(async node => {
+        // Check if either stable OR volatile exists
+        // Return true for either, false for neither.
+        const results = await Promise.all([
+          await this.__getPair(start, node, 'stable'),
+          await this.__getPair(start, node, 'volatile'),
+          await this.__getPair(node, start, 'stable'),
+          await this.__getPair(node, start, 'volatile'),
+        ])
+
+        // Check if we have a pair in either direction
+        return results.some(pair => pair !== undefined)
+      }),
+    )
 
     // Iterate over our neighbors
     for (const neighbor of neighbors) {
@@ -345,12 +361,13 @@ export class SpectrumRouter {
   }
 
   /**
-   * Get a list of nodes that are directly connected to our token.
-   * @param token The token to get neighbors for.
-   * @returns A list of neighbors.
+   * Get the pair associated to a given set of tokens.
+   * @param tokenX Address of an arbitrary token.
+   * @param tokenY Address of an arbitrary token.
+   * @returns The pair address.
    */
-  private async __getNeighbors(token: BytesLike): Promise<BytesLike[]> {
-    return this._graphCache.get(token)
+  private async __getPair(tokenX: BytesLike, tokenY: BytesLike, type: 'volatile' | 'stable'): Promise<BytesLike | undefined> {
+    return type === 'stable' ? this._graphStableCache.get(tokenX, tokenY) : this._graphVolatileCache.get(tokenX, tokenY)
   }
 
   /**
@@ -369,7 +386,17 @@ export class SpectrumRouter {
    * @returns The volatility of the pair (stable vs volatile).
    */
   private async __getVolatility(tokenA: BytesLike, tokenB: BytesLike): Promise<NodeVolatility | undefined> {
-    return this._volatilityCache.get(`${tokenA}:${tokenB}`)
+    const [ABStable, ABVolatile, BAStable, BAVolatile] = await Promise.all([
+      await this.__getPair(tokenA, tokenB, 'stable'),
+      await this.__getPair(tokenA, tokenB, 'volatile'),
+      await this.__getPair(tokenB, tokenA, 'stable'),
+      await this.__getPair(tokenB, tokenA, 'volatile'),
+    ])
+
+    const isStable = ABStable || BAStable
+    const isVolatile = ABVolatile || BAVolatile
+
+    return isStable && isVolatile ? 'stable_volatile' : isStable ? 'stable' : isVolatile ? 'volatile' : undefined
   }
 
   /**
@@ -421,7 +448,7 @@ export class SpectrumRouter {
     // Sort our pools from lowest to highest blockNumber
     const pools = _pools.sort((a, b) => a.blockNumber - b.blockNumber)
 
-    // Chunk the pools into groups of 100 items so we don't overload our cache.
+    // Chunk the pools into groups of n-items so we don't overload our cache.
     // This is a bit of a hack, but it's the best we can do for now. Note: it
     // has to take into account the blockNumbers in case we get interrupted
     // while synchronizing. This assumes the first key in the group is the lowest.
@@ -437,7 +464,7 @@ export class SpectrumRouter {
 
       // This means we're on 2nd+ iteration, so we need to check if
       // we need to create a new chunk or add to the last chunk.
-      if (lastChunk.length + group.length > 100) {
+      if (lastChunk.length + group.length > CHUNK_SIZE) {
         return [...acc, [...group]]
       } else {
         lastChunk.push(...group)
@@ -455,7 +482,7 @@ export class SpectrumRouter {
       let highestBlockNumber = 0
       for (let k = 0; k < chunk.length; k++) {
         const pool = chunk[k]!
-        await this.__addPool(pool.token0, pool.token1, pool.stable)
+        await this.__addPool(pool)
         highestBlockNumber = pool.blockNumber
       }
 
@@ -476,34 +503,24 @@ export class SpectrumRouter {
    * Add a pool to our cache.
    * @param token0 The first token in the pair.
    * @param token1 The second token in the pair.
+   * @param address The pair address.
    * @param stable Whether or not the pair is stable.
    */
-  public async __addPool(token0: Token, token1: Token, stable: boolean): Promise<void> {
+  public async __addPool({ token0, token1, address, stable }: Pool): Promise<void> {
     try {
-      // Store token0 in our cache
-      await this._tokensCache.set(token0.address, token0)
+      await Promise.all([
+        // Store token0 in our cache
+        await this._tokensCache.set(token0.address, token0),
 
-      // Store token1 in our cache
-      await this._tokensCache.set(token1.address, token1)
+        // Store token1 in our cache
+        await this._tokensCache.set(token1.address, token1),
 
-      // Define the volatility of the pair
-      const volatility = stable ? 'stable' : 'volatile'
+        // Store the pair in our cache as stable
+        stable ? await this._graphStableCache.set(token0.address, token1.address, address) : undefined,
 
-      // Store the volatility in our cache for direction A -> B
-      let currentVolatility = await this.__getVolatility(token0.address, token1.address)
-      await this._volatilityCache.set(`${token0.address}:${token1.address}`, !currentVolatility ? volatility : 'stable_volatile')
-
-      // Now store the volatility in our cache for direction B -> A
-      currentVolatility = await this.__getVolatility(token1.address, token0.address)
-      await this._volatilityCache.set(`${token1.address}:${token0.address}`, !currentVolatility ? volatility : 'stable_volatile')
-
-      // Reference the relationship between token0 and token1 in our Directed Weighted Graph.
-      let current = await this.__getNeighbors(token0.address)
-      await this._graphCache.set(token0.address, [...new Set([...current, token1.address])])
-
-      // Reference the relationship between token1 and token0 in our Directed Weighted Graph.
-      current = await this.__getNeighbors(token1.address)
-      await this._graphCache.set(token1.address, [...new Set([...current, token0.address])])
+        // Store the pair in our cache as volatile
+        !stable ? await this._graphVolatileCache.set(token0.address, token1.address, address) : undefined,
+      ])
     } catch (err) {
       console.error(err)
     }
