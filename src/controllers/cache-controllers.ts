@@ -105,7 +105,7 @@ export class TokensCacheController extends CacheBase {
   public async get(key: BytesLike): Promise<Token | undefined> {
     try {
       const token = await this.redis.hgetall(this.getHashKey(key))
-      return token ? Token.parse(token) : undefined
+      return Object.keys(token).length ? Token.parse(token) : undefined
     } catch (err) {
       console.error(err)
       return undefined

@@ -1,7 +1,7 @@
 import { Abi, ContractFunctionResult } from 'viem'
 import { BigNumber } from 'bignumber.js'
 
-import { BytesLike, CompressedPath, GetAmountsOutMultiArgs, GetPoolRequestsArgs, InflatedPath, RouterErrorCode } from '../typings/index.js'
+import { BytesLike, CompressedPath, GetAmountsOutReturn, GetPriceReturn, RouterErrorCode } from '../typings/index.js'
 import { SPECTRUM_ROUTER_ABI } from '../abi/SPECTRUM_ROUTER_ABI.js'
 import { RouterAddresses } from '../config.js'
 import { GetAmountsOutHelper } from '../helpers/getAmountsOut.js'
@@ -12,39 +12,6 @@ import { Compression } from '../helpers/compression.js'
 type ErrorReturn = {
   error: true
   errorCode: RouterErrorCode
-}
-
-type GetAmountsOutReturn = {
-  error: false
-  payload: {
-    address: BytesLike
-    abi: typeof SPECTRUM_ROUTER_ABI
-    functionName: 'getAmountsOutMulti'
-    args: GetAmountsOutMultiArgs
-  }
-  parse: (
-    type: 'highest' | 'lowest',
-    data: ContractFunctionResult<typeof SPECTRUM_ROUTER_ABI, 'getAmountsOutMulti'> | undefined,
-  ) => {
-    amountsOut: BigNumber
-    path: InflatedPath
-    compressedPath: CompressedPath
-  }
-}
-
-type GetPriceReturn = {
-  error: false
-  payload: {
-    address: BytesLike
-    abi: typeof SPECTRUM_ROUTER_ABI
-    functionName: 'getPoolRequests'
-    args: GetPoolRequestsArgs
-  }
-  parse: (data: ContractFunctionResult<typeof SPECTRUM_ROUTER_ABI, 'getPoolRequests'> | undefined) => {
-    price: BigNumber
-    path: InflatedPath
-    compressedPath: CompressedPath
-  }
 }
 
 export abstract class SpectrumContract {

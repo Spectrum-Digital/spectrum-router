@@ -235,6 +235,10 @@ export class SpectrumRouter {
    * @returns A list of available paths without compression.
    */
   private async __getAvailablePaths(tokenIn: BytesLike, tokenOut: BytesLike): Promise<InflatedPath[]> {
+    // Check if tokenIn and tokenOut are existing tokens
+    const [tokenInExists, tokenOutExists] = await Promise.all([this.__getToken(tokenIn), this.__getToken(tokenOut)])
+    if (!tokenInExists || !tokenOutExists) return []
+
     // Find all available paths without too much recursion using weighted nodes.
     const generator = this.__traverseWeightedGraph(tokenIn, tokenOut, new Set())
     let availablePaths: Array<BytesLike[]> = []
@@ -244,6 +248,7 @@ export class SpectrumRouter {
 
     // Each path starts with the tokenIn, remove them.
     availablePaths = availablePaths.map(nodes => nodes.slice(1))
+    if (!availablePaths.length) return []
 
     // Convert our nodes into paths
     const pathsWithPotentialErrors = await Promise.all(

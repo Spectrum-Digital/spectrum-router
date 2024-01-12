@@ -1,5 +1,7 @@
-import { GetFunctionArgs } from 'viem'
+import { ContractFunctionResult, GetFunctionArgs } from 'viem'
+import { BigNumber } from 'bignumber.js'
 import { SPECTRUM_ROUTER_ABI } from '../abi/SPECTRUM_ROUTER_ABI.js'
+import { BytesLike, CompressedPath, InflatedPath } from './zod.js'
 
 export { BytesLike, Token, DEXConfiguration, InflatedPath, CompressedPath } from './zod.js'
 
@@ -34,3 +36,36 @@ export type GetAmountsOutMultiArgs = NonOptionalKeys<_GetAmountsOutMultiArgs> ex
 
 type _GetPoolRequestsArgs = GetFunctionArgs<typeof SPECTRUM_ROUTER_ABI, 'getPoolRequests'>
 export type GetPoolRequestsArgs = NonOptionalKeys<_GetPoolRequestsArgs> extends never ? never : _GetPoolRequestsArgs['args']
+
+export type GetAmountsOutReturn = {
+  error: false
+  payload: {
+    address: BytesLike
+    abi: typeof SPECTRUM_ROUTER_ABI
+    functionName: 'getAmountsOutMulti'
+    args: GetAmountsOutMultiArgs
+  }
+  parse: (
+    type: 'highest' | 'lowest',
+    data: ContractFunctionResult<typeof SPECTRUM_ROUTER_ABI, 'getAmountsOutMulti'> | undefined,
+  ) => {
+    amountsOut: BigNumber
+    path: InflatedPath
+    compressedPath: CompressedPath
+  }
+}
+
+export type GetPriceReturn = {
+  error: false
+  payload: {
+    address: BytesLike
+    abi: typeof SPECTRUM_ROUTER_ABI
+    functionName: 'getPoolRequests'
+    args: GetPoolRequestsArgs
+  }
+  parse: (data: ContractFunctionResult<typeof SPECTRUM_ROUTER_ABI, 'getPoolRequests'> | undefined) => {
+    price: BigNumber
+    path: InflatedPath
+    compressedPath: CompressedPath
+  }
+}
