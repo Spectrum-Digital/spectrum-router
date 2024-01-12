@@ -1,5 +1,11 @@
 # @spectrum-digital/spectrum-router
 
+## 0.0.19
+
+### Patch Changes
+
+- af83162: minor bug fixes
+
 ## 0.0.18
 
 ### Patch Changes
