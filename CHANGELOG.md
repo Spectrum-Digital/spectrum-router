@@ -1,5 +1,11 @@
 # @spectrum-digital/spectrum-router
 
+## 0.0.20
+
+### Patch Changes
+
+- 11d33a9: precision bugfix
+
 ## 0.0.19
 
 ### Patch Changes
