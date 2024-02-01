@@ -97,6 +97,7 @@ export abstract class SpectrumContract {
   public static getPrice(chainId: number, tokenIn: BytesLike, tokenOut: BytesLike, path: CompressedPath): ErrorReturn | GetPriceReturn {
     const address = this.getSpectrumRouterAddress(chainId)
     const inflated = Compression.decompressPath(path)
+    const lastHop = inflated[inflated.length - 1]
 
     if (!address) {
       return {
@@ -108,7 +109,7 @@ export abstract class SpectrumContract {
         error: true,
         errorCode: 'UNNECESSARY_REQUEST',
       }
-    } else if (!inflated.length) {
+    } else if (!inflated.length || !lastHop) {
       return {
         error: true,
         errorCode: 'EMPTY_ROUTE',
@@ -169,7 +170,7 @@ export abstract class SpectrumContract {
         }, new BigNumber(1))
 
         return {
-          price: price,
+          price: new BigNumber(price.toPrecision(lastHop.to.decimals)),
           path: Compression.decompressPath(path),
           compressedPath: path,
         }
