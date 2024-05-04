@@ -59,6 +59,16 @@ export const DEXConfigurations = {
     pair_stable_formula: 'N/A',
     pair_getReserves: 'getReserves_112_112_32',
   },
+  BINANCE_THENA_V2: {
+    name: 'Thena V2',
+    chainId: ChainId.BINANCE,
+    router_address: '0x20a304a7d126758dfe6B243D0fc515F83bCA8431',
+    router_getAmountsOut: 'from_to_stable',
+    factory_address: '0xAFD89d21BdB66d00817d4153E055830B1c2B3970',
+    factory_getPair: 'getPair_A_B_stable',
+    pair_stable_formula: 'x3y_y3x_variant_A',
+    pair_getReserves: 'getReserves_256_256_256',
+  },
   FANTOM_BASED_V2: {
     name: 'Based V2',
     chainId: ChainId.FANTOM,
