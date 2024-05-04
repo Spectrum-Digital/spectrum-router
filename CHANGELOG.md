@@ -1,5 +1,11 @@
 # @spectrum-digital/spectrum-router
 
+## 0.0.21
+
+### Patch Changes
+
+- e35d410: add thena v2
+
 ## 0.0.20
 
 ### Patch Changes
